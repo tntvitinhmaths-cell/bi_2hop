@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Mô phỏng xác suất 2 hộp</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Segoe UI;
+  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  color:white;
+  text-align:center;
+}
+h1{margin:20px;text-shadow:0 0 15px white;}
+.panel{
+  background:rgba(255,255,255,0.1);
+  padding:15px;margin:10px;border-radius:15px;
+}
+.container{
+  display:flex;
+  justify-content:center;
+  gap:30px;
+}
+.box{
+  width:300px;height:240px;
+  background:rgba(255,255,255,0.1);
+  border-radius:20px;padding:10px;
+}
+.ball{
+  width:40px;height:40px;border-radius:50%;
+  display:inline-block;margin:5px;
+  box-shadow:0 0 10px white;
+}
+.red{background:red;}
+.blue{background:blue;}
+.yellow{background:gold;}
+.green{background:lime;}
+.highlight{
+  transform:scale(1.6);
+  box-shadow:0 0 25px white;
+}
+button{
+  padding:8px 14px;margin:5px;
+  border:none;border-radius:8px;
+  cursor:pointer;
+}
+.log{
+  background:white;color:black;
+  height:130px;overflow:auto;
+  border-radius:10px;padding:10px;text-align:left;
+}
+.prob{
+  display:flex;
+  justify-content:space-around;
+}
+.card{
+  width:30%;
+  background:rgba(255,255,255,0.1);
+  padding:10px;
+  border-radius:10px;
+}
+</style>
+</head>
+
+<body>
+<h1>TRƯỜNG THPT NAM ĐÔNG</h1>
+<h1>TỔ TOÁN</h1>
+<h1>🎯Mô phỏng rút bi từ 2 hộp</h1>
+
+<div class="panel">
+🔴 <input id="r" value="3">
+🔵 <input id="b" value="3">
+🟡 <input id="y" value="1">
+🟢 <input id="g" value="1"><br>
+
+<button onclick="createBox('box1')">Tạo Hộp 1</button>
+<button onclick="createBox('box2')">Tạo Hộp 2</button>
+<button onclick="resetAll()">Reset</button>
+</div>
+
+<div class="container">
+<div class="box" id="box1">📦 Hộp 1</div>
+<div class="box" id="box2">🎯 Hộp 2</div>
+</div>
+
+<div class="panel">
+<button onclick="drawBox1()">Rút H1</button>
+<button onclick="drawBox2()">Rút H2</button>
+<button onclick="transfer()">🔁 Chuyển H1 → H2</button>
+<button onclick="drawAfterTransfer()">🎯 Rút H2 (sau chuyển)</button>
+</div>
+
+<div class="panel">
+<h3>📊 Xác suất</h3>
+
+<div class="prob">
+
+<div class="card">
+<b>Hộp 1</b><br>
+<u>Thực nghiệm</u>
+<div id="p1">Chưa rút</div>
+<u>Lý thuyết</u>
+<div id="t1"></div>
+</div>
+
+<div class="card">
+<b>Hộp 2</b><br>
+<u>Thực nghiệm</u>
+<div id="p2">Chưa rút</div>
+<u>Lý thuyết</u>
+<div id="t2"></div>
+</div>
+
+<div class="card">
+<b>H2 | Sau chuyển</b><br>
+<u>Thực nghiệm</u>
+<div id="p3">Chưa rút</div>
+<u>Lý thuyết</u>
+<div id="t3"></div>
+</div>
+
+</div>
+</div>
+
+<div class="panel">
+<h3>📜 Nhật ký</h3>
+<div id="log" class="log"></div>
+</div>
+
+<script>
+
+let turn=1, started=false;
+let last1=null,last2=null,last3=null;
+
+// lưu trạng thái trước
+let prevBox1=[], prevBox2=[];
+
+// lưu bi đã chuyển
+let transferredBall=null;
+let hasTransferred=false;
+
+// đếm
+let c1={red:0,blue:0,yellow:0,green:0}, t1c=0;
+let c2={red:0,blue:0,yellow:0,green:0}, t2c=0;
+let c3={red:0,blue:0,yellow:0,green:0}, t3c=0;
+
+function createBox(id){
+  let box=document.getElementById(id);
+  box.innerHTML=(id==="box1"?"📦":"🎯")+"<br>";
+
+  function add(n,c){
+    for(let i=0;i<n;i++){
+      let d=document.createElement("div");
+      d.className="ball "+c;
+      box.appendChild(d);
+    }
+  }
+
+  add(r.value,"red");
+  add(b.value,"blue");
+  add(y.value,"yellow");
+  add(g.value,"green");
+}
+
+function getBalls(id){
+  let arr=[];
+  document.querySelectorAll("#"+id+" .ball")
+    .forEach(x=>arr.push(x.classList[1]));
+  return arr;
+}
+
+function render(id,arr){
+  let box=document.getElementById(id);
+  box.innerHTML=(id==="box1"?"📦":"🎯")+"<br>";
+  arr.forEach(c=>{
+    let d=document.createElement("div");
+    d.className="ball "+c;
+    box.appendChild(d);
+  });
+}
+
+function draw(arr){
+  let i=Math.floor(Math.random()*arr.length);
+  let c=arr[i];
+  arr.splice(i,1);
+  return c;
+}
+
+function highlight(color){
+  let d=document.createElement("div");
+  d.className="ball "+color+" highlight";
+  document.body.appendChild(d);
+  setTimeout(()=>d.remove(),500);
+}
+
+function addLog(t){
+  let l=document.getElementById("log");
+  l.innerHTML+=t+"<br>";
+}
+
+// thực nghiệm
+function showProb(){
+  function f(c,t,last){
+    if(t===0 || !last) return "Chưa rút";
+    return `${last}: ${(c[last]/t).toFixed(2)}`;
+  }
+  p1.innerHTML=f(c1,t1c,last1);
+  p2.innerHTML=f(c2,t2c,last2);
+  p3.innerHTML=f(c3,t3c,last3);
+}
+
+// lý thuyết trước khi rút
+function getTheoryPrev(prev,last){
+  if(!last) return "";
+  let total=prev.length;
+  let c={red:0,blue:0,yellow:0,green:0};
+  prev.forEach(x=>c[x]++);
+  return `${last}: ${(c[last]/total).toFixed(2)}`;
+}
+
+// xác suất có điều kiện sau chuyển
+function getTheoryTransfer(last){
+  if(!last || !transferredBall) return "";
+
+  let b2=prevBox2;
+  let total=b2.length;
+
+  let c={red:0,blue:0,yellow:0,green:0};
+  b2.forEach(x=>c[x]++);
+
+  let newCount = c[last] + (transferredBall===last ? 1 : 0);
+
+  return `${last}: ${(newCount/(total+1)).toFixed(2)}`;
+}
+
+function updateTheory(){
+  if(!started) return;
+
+  t1.innerHTML=getTheoryPrev(prevBox1,last1);
+  t2.innerHTML=getTheoryPrev(prevBox2,last2);
+  t3.innerHTML=getTheoryTransfer(last3);
+}
+
+// ===== ACTIONS =====
+
+function drawBox1(){
+  let b=getBalls("box1"); if(!b.length) return;
+
+  prevBox1=[...b];
+  started=true;
+
+  let c=draw(b);
+  last1=c;
+
+  render("box1",b);
+  highlight(c);
+  addLog(`Lần ${turn++}: H1 → ${c}`);
+
+  c1[c]++; t1c++;
+  showProb(); updateTheory();
+}
+
+function drawBox2(){
+  let b=getBalls("box2"); if(!b.length) return;
+
+  prevBox2=[...b];
+  started=true;
+
+  let c=draw(b);
+  last2=c;
+
+  render("box2",b);
+  highlight(c);
+  addLog(`Lần ${turn++}: H2 → ${c}`);
+
+  c2[c]++; t2c++;
+  showProb(); updateTheory();
+}
+
+// 🔁 CHUYỂN
+function transfer(){
+  let b1=getBalls("box1");
+  let b2=getBalls("box2");
+
+  if(!b1.length) return;
+
+  prevBox1=[...b1];
+  prevBox2=[...b2];
+
+  let c=draw(b1);
+  transferredBall=c;
+
+  b2.push(c);
+  hasTransferred=true;
+
+  render("box1",b1);
+  render("box2",b2);
+
+  highlight(c);
+  addLog(`Lần ${turn++}: Chuyển ${c} từ H1 → H2`);
+}
+
+// 🎯 RÚT SAU CHUYỂN
+function drawAfterTransfer(){
+  let b2=getBalls("box2");
+
+  if(!hasTransferred || !b2.length) return;
+
+  started=true;
+
+  let c=draw(b2);
+  last3=c;
+
+  render("box2",b2);
+
+  highlight(c);
+  addLog(`Lần ${turn++}: Rút từ H2 → ${c}`);
+
+  c3[c]++; t3c++;
+
+  showProb();
+  updateTheory();
+
+  hasTransferred=false;
+}
+
+// RESET
+function resetAll(){
+  box1.innerHTML="📦 Hộp 1";
+  box2.innerHTML="🎯 Hộp 2";
+  document.getElementById("log").innerHTML="";
+
+  p1.innerHTML=p2.innerHTML=p3.innerHTML="Chưa rút";
+  t1.innerHTML=t2.innerHTML=t3.innerHTML="";
+
+  turn=1; started=false;
+  last1=last2=last3=null;
+  transferredBall=null;
+  hasTransferred=false;
+
+  c1={red:0,blue:0,yellow:0,green:0}; t1c=0;
+  c2={red:0,blue:0,yellow:0,green:0}; t2c=0;
+  c3={red:0,blue:0,yellow:0,green:0}; t3c=0;
+}
+
+</script>
+
+</body>
+</html>
